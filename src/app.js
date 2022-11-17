@@ -1,8 +1,10 @@
 import { ExecAsync } from "./util/scripting.js";
 
 import express from "express";
+import cors from "cors";
 const app = express();
 app.use(express.json());
+app.use(cors());
 const port = 3000;
 
 import { PrismaClient } from "@prisma/client";
