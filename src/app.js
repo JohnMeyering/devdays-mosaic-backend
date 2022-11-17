@@ -1,6 +1,6 @@
 import { ExecAsync } from "./util/scripting.js";
 
-import express from 'express';
+import express from "express";
 const app = express();
 app.use(express.json());
 const port = 3000;
@@ -95,7 +95,7 @@ app.post("/fan/image/:mosaic_id", async (req, res, next) => {
   }
 });
 
-app.get("/", (req, res) => {
+app.get("/", async (req, res) => {
   await ExecAsync("ls -l");
   res.send("Hello World!");
 });
