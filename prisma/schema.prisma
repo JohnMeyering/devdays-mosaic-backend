@@ -19,9 +19,10 @@ model User {
 
 model Raffle {
   id          Int           @id @default(autoincrement())
+  prize       String
   entries     RaffleEntry[]
-  winner      User          @relation(fields: [winnerId], references: [id])
-  winnerId    Int
+  winner      User?         @relation(fields: [winnerId], references: [id])
+  winnerId    Int?
   photoMosaic PhotoMosaic[]
 }
 
@@ -44,10 +45,11 @@ model Image {
 }
 
 model PhotoMosaic {
-  id       Int     @id @default(autoincrement())
-  filename String
-  path     String
-  raffle   Raffle? @relation(fields: [raffleId], references: [id])
-  raffleId Int
-  images   Image[]
+  id        Int     @id @default(autoincrement())
+  filename  String?
+  path      String?
+  eventName String
+  raffle    Raffle? @relation(fields: [raffleId], references: [id])
+  raffleId  Int?
+  images    Image[]
 }
