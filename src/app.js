@@ -1,9 +1,11 @@
-const express = require("express");
+import { ExecAsync } from "./util/scripting.js";
+
+import express from 'express';
 const app = express();
 app.use(express.json());
 const port = 3000;
 
-const { PrismaClient } = require("@prisma/client");
+import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 const checkForRequiredParameters = (req, parameters) => {
@@ -94,6 +96,7 @@ app.post("/fan/image/:mosaic_id", async (req, res, next) => {
 });
 
 app.get("/", (req, res) => {
+  await ExecAsync("ls -l");
   res.send("Hello World!");
 });
 
