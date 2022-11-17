@@ -18,6 +18,19 @@ const checkForRequiredParameters = (req, parameters) => {
   }
 };
 
+app.get("/admin/mosaic", async (req, res, next) => {
+  try {
+    const mosaics = await prisma.photoMosaic.findMany({
+      include: {
+        raffle: true,
+      },
+    });
+    res.json(mosaics);
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.post("/admin/mosaic", async (req, res, next) => {
   try {
     checkForRequiredParameters(req, ["event_name"]);
