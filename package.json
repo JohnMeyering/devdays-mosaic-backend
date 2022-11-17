@@ -4,5 +4,6 @@
   },
   "devDependencies": {
     "prisma": "^4.6.1"
-  }
+  },
+  "type": "module"
 }
