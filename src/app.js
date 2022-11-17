@@ -1,8 +1,10 @@
 import { ExecAsync } from "./util/scripting.js";
 
 import express from "express";
+import cors from "cors";
 const app = express();
 app.use(express.json());
+app.use(cors());
 const port = 3000;
 
 import { PrismaClient } from "@prisma/client";
@@ -17,6 +19,19 @@ const checkForRequiredParameters = (req, parameters) => {
     }
   }
 };
+
+app.get("/admin/mosaic", async (req, res, next) => {
+  try {
+    const mosaics = await prisma.photoMosaic.findMany({
+      include: {
+        raffle: true,
+      },
+    });
+    res.json(mosaics);
+  } catch (err) {
+    next(err);
+  }
+});
 
 app.post("/admin/mosaic", async (req, res, next) => {
   try {
