@@ -45,15 +45,19 @@ app.post("/admin/mosaic", async (req, res, next) => {
   }
 });
 
-app.get("/admin/images/:mosaic_id", async (req, res) => {
-  const { mosaic_id } = req.params;
-  const images = await prisma.post.findMany({
-    where: { photoMosaicId: mosaic_id },
-  });
-  res.json(images);
+app.get("/admin/images/:mosaic_id", async (req, res, next) => {
+  try {
+    const { mosaic_id } = req.params;
+    const images = await prisma.image.findMany({
+      where: { photoMosaicId: parseInt(mosaic_id) },
+    });
+    res.json(images);
+  } catch (err) {
+    next(err);
+  }
 });
 
-app.post("/fan/image/:mosaic_id", async (req, res, next) => {
+app.post("/fan/images/:mosaic_id", async (req, res, next) => {
   try {
     checkForRequiredParameters(req, ["full_name", "images"]);
 
@@ -81,6 +85,7 @@ app.post("/fan/image/:mosaic_id", async (req, res, next) => {
           filename: image.filename,
           path: image.path,
           userId: user.id,
+          photoMosaicId: parseInt(mosaic_id),
         };
         var created_image = await prisma.image.create({
           data: image_data,
