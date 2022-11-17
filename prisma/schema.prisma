@@ -14,11 +14,14 @@ model User {
   id      Int           @id @default(autoincrement())
   name    String        @unique
   entries RaffleEntry[]
+  raffles Raffle[]
 }
 
 model Raffle {
-  id      Int           @id @default(autoincrement())
-  entries RaffleEntry[]
+  id       Int           @id @default(autoincrement())
+  entries  RaffleEntry[]
+  winner   User          @relation(fields: [winnerId], references: [id])
+  winnerId Int
 }
 
 model RaffleEntry {
