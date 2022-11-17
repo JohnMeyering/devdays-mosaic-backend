@@ -15,6 +15,7 @@ model User {
   name    String        @unique
   entries RaffleEntry[]
   raffles Raffle[]
+  Image   Image[]
 }
 
 model Raffle {
@@ -39,7 +40,8 @@ model Image {
   id            Int          @id @default(autoincrement())
   filename      String
   path          String
-  name          String
+  user          User         @relation(fields: [userId], references: [id])
+  userId        Int
   photoMosaic   PhotoMosaic? @relation(fields: [photoMosaicId], references: [id])
   photoMosaicId Int?
 }

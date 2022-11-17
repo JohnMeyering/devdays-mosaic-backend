@@ -6,7 +6,7 @@ const port = 3000;
 const { PrismaClient } = require("@prisma/client");
 const prisma = new PrismaClient();
 
-const checkParametersExist = (req, parameters) => {
+const checkForRequiredParameters = (req, parameters) => {
   for (var i = 0; i < parameters.length; i++) {
     if (!req.body.hasOwnProperty(parameters[i])) {
       throw new Error(
@@ -18,9 +18,9 @@ const checkParametersExist = (req, parameters) => {
 
 app.post("/admin/mosaic", async (req, res, next) => {
   try {
-    checkParametersExist(req, ["event_name"]);
+    checkForRequiredParameters(req, ["event_name"]);
 
-    var mosaic = prisma.MosaicCreateInput;
+    var mosaic;
     if (req.body.hasOwnProperty("prize")) {
       mosaic = {
         eventName: req.body.event_name,
@@ -49,6 +49,48 @@ app.get("/admin/images/:mosaic_id", async (req, res) => {
     where: { photoMosaicId: mosaic_id },
   });
   res.json(images);
+});
+
+app.post("/fan/image/:mosaic_id", async (req, res, next) => {
+  try {
+    checkForRequiredParameters(req, ["full_name", "images"]);
+
+    var { mosaic_id } = req.params;
+
+    var images = req.body.images;
+    var user = await prisma.user.findUnique({
+      where: {
+        name: req.body.full_name,
+      },
+    });
+
+    if (user === null) {
+      user = await prisma.user.create({
+        data: {
+          name: req.body.full_name,
+        },
+      });
+    }
+
+    var resp = [];
+    await Promise.all(
+      images.map(async (image) => {
+        const image_data = {
+          filename: image.filename,
+          path: image.path,
+          userId: user.id,
+        };
+        var created_image = await prisma.image.create({
+          data: image_data,
+        });
+        resp.push(created_image);
+      })
+    );
+
+    res.json(resp);
+  } catch (err) {
+    next(err);
+  }
 });
 
 app.get("/", (req, res) => {
