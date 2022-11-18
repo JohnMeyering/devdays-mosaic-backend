@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+  <head>
+    <meta charset="utf-8">
+    <title>We Gamin`</title>
+  </head>
+  <body>
+    <form
+      action="http://localhost:3000/admin/mosaic/1/target-image"
+      method="post"
+      enctype="multipart/form-data"
+      style="display: flex; flex-direction: column; background-color: beige; margin: 48px;"
+    >
+      <div style="margin: 20px;">
+        <label for="image">Select a file:</label>
+        <input type="file" name="image">
+      </div>
+      <div style="margin: 20px;">
+        <label for="text">Some text field:</label>
+        <input type="text" name="text" value="">
+      </div>
+      <div style="margin: 20px;">
+        <input type="submit" value="Submit">
+      </div>
+    </form>
+
+    <form
+      action="http://localhost:3000/fan/mosaic/1/images?fullName=Jason+Born"
+      method="post"
+      enctype="multipart/form-data"
+      style="display: flex; flex-direction: column; background-color: beige; margin: 48px;"
+    >
+      <div style="margin: 20px;">
+        <label for="images">Select files:</label>
+        <input type="file" name="images" multiple>
+      </div>
+      <div style="margin: 20px;">
+        <label for="testText">Some text field:</label>
+        <input type="text" name="testText" value="">
+      </div>
+      <div style="margin: 20px;">
+        <input type="submit" value="Submit">
+      </div>
+    </form>
+  </body>
+</html>
