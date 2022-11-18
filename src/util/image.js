@@ -8,5 +8,5 @@ export async function CreateMosaic
   resultImageName
 )
 {
-  await ExecAsync(`python3 ./util/python/mosaic.py ${targetImagePath} ${tileImagesPath} ${resultImagePath}${resultImageName}`);
+  await ExecAsync(`python3 ./src/util/python/mosaic.py ${targetImagePath} ${tileImagesPath} ${resultImagePath}${resultImageName}`);
 }
