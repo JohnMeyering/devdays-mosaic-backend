@@ -2,7 +2,7 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 import { CreateMosaic } from "./util/image.js";
-import { MoveFile } from "./util/files.js"
+import { MoveFile, DeleteFile, CreateDirectory } from "./util/files.js"
 
 import express from "express";
 import cors from "cors";
@@ -67,6 +67,10 @@ app.post("/admin/mosaic", async (req, res, next) => {
     }
     const photoMosaic = await prisma.photoMosaic.create({ data: mosaic });
 
+    const mosaicFolderPath = `public/mosaics/${photoMosaic.id}`
+    await CreateDirectory(mosaicFolderPath)
+    await CreateDirectory(`${mosaicFolderPath}/images`)
+
     res.json(photoMosaic);
   } catch (err) {
     next(err);
@@ -126,15 +130,15 @@ app.post('/admin/mosaic/:mosaicId/generate', async (req, res) => {
     where: { id: parseInt(mosaicId) }
   })
   
-  const targetImageFullPath =  `/public/mosaics/${mosaicId}/${mosaic.targetFilename}`;
-  const tileImagesPath = `/public/mosaics/${mosaicId}/images/`;
-  const resultImagePath = `/public/mosaics/${mosaicId}/`;
+  const targetImageFullPath =  `/mosaics/${mosaicId}/${mosaic.targetFilename}`;
+  const tileImagesPath = `/mosaics/${mosaicId}/images/`;
+  const resultImagePath = `/mosaics/${mosaicId}/`;
   const resultImageName = "mosaic"; // Do not include the .jpeg extension.
 
   await CreateMosaic(
-    "." + targetImageFullPath,
-    "." + tileImagesPath,
-    "." + resultImagePath,
+    "./public" + targetImageFullPath,
+    "./public" + tileImagesPath,
+    "./public" + resultImagePath,
     resultImageName
   )
 
@@ -149,6 +153,48 @@ app.post('/admin/mosaic/:mosaicId/generate', async (req, res) => {
   })
   
   res.send(updatedMosaic);
+})
+
+app.delete("/test", async (req, res) => {
+  const filePath = req.body.filePath
+  await DeleteFile("./public" + filePath)
+  res.send("Delete successful")
+})
+
+app.get("/test2", async (req, res) => {
+  const mosaicFolderPath = `public/mosaics/${42}`
+  await CreateDirectory(mosaicFolderPath)
+  await CreateDirectory(`${mosaicFolderPath}/images`)
+  res.send("Success")
+})
+
+app.delete("/admin/mosaic/:mosaicId/images", async (req, res) => {
+  const { mosaicId } = req.params;
+  const imageIds = req.body;
+
+  const images = await prisma.image.findMany({
+    where: {
+      photoMosaicId: parseInt(mosaicId),
+      id: {
+        in: imageIds.map(id => parseInt(id))
+      },
+    }
+  })
+
+  const deletedImages = await prisma.image.deleteMany({
+    where: {
+      photoMosaicId: parseInt(mosaicId),
+      id: {
+        in: imageIds.map(id => parseInt(id))
+      },
+    }
+  })
+
+  images.forEach(async image => {
+    await DeleteFile("./public" + image.path + image.filename)
+  })
+
+  res.json(deletedImages)
 })
 
 app.post("/fan/mosaic/:mosaicId/images", upload.array('images'), async (req, res, next) => {
@@ -184,7 +230,7 @@ app.post("/fan/mosaic/:mosaicId/images", upload.array('images'), async (req, res
         const createdImage = await prisma.image.create({
           data: {
             filename: "temp",
-            path: `public/mosaics/${mosaicId}/images/`,
+            path: `/mosaics/${mosaicId}/images/`,
             userId: user.id,
             photoMosaicId: parseInt(mosaicId),
           },
@@ -202,7 +248,7 @@ app.post("/fan/mosaic/:mosaicId/images", upload.array('images'), async (req, res
 
         MoveFile(
           image.path,
-          `${updatedImage.path}${updatedImage.filename}`
+          `public/${updatedImage.path}${updatedImage.filename}`
         );
 
         resp.push(updatedImage);
