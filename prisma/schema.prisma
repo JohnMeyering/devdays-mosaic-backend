@@ -48,8 +48,10 @@ model Image {
 
 model PhotoMosaic {
   id        Int     @id @default(autoincrement())
-  filename  String?
-  path      String?
+  targetFilename  String?
+  targetPath      String?
+  mosaicFilename  String?
+  mosaicPath      String?
   eventName String
   raffle    Raffle? @relation(fields: [raffleId], references: [id])
   raffleId  Int?

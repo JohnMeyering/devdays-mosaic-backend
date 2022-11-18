@@ -2,29 +2,29 @@ import { PrismaClient } from "@prisma/client";
 const prisma = new PrismaClient();
 
 import { CreateMosaic } from "./util/image.js";
+import { MoveFile } from "./util/files.js"
 
 import express from "express";
 import cors from "cors";
+// import qs from "qs"
 const app = express();
+// app.setting('query parser', function (str) {
+//   return qs.parse(str, { /* custom options */ });
+// });
+app.use(express.static('public'));
 app.use(express.json());
 app.use(cors());
 const port = 3000;
-app.use(express.static('../public'))
 
-app.get('/', async (req, res) => {
-  // These variables need to be dynamic.
-  const targetImagePath = "~/images/test.jpg";
-  const tileImagesPath = "~/images/airplane";
-  const resultImagePath = "../public/images/"
-  const resultImageName = "api_test_mosaic"; // Do not include the .jpeg extension
+import multer from "multer";
+const upload = multer({ dest: "temp/" });
 
-  await CreateMosaic(targetImagePath, tileImagesPath, resultImagePath, resultImageName)
-  
-  res.send(`Hello World! /public/images/${resultImageName}.jpeg`);
-})
+function getFileExtension(filename) {
+  return filename.slice((filename.lastIndexOf(".") - 1 >>> 0) + 2).toLowerCase();
+}
 
 const checkForRequiredParameters = (req, parameters) => {
-  for (var i = 0; i < parameters.length; i++) {
+  for (let i = 0; i < parameters.length; i++) {
     if (!req.body.hasOwnProperty(parameters[i])) {
       throw new Error(
         "'{0}'".format(parameters.join(", ")) + " parameter(s) required"
@@ -33,7 +33,7 @@ const checkForRequiredParameters = (req, parameters) => {
   }
 };
 
-app.get("/admin/mosaic", async (req, res, next) => {
+app.get("/admin/mosaics", async (req, res, next) => {
   try {
     const mosaics = await prisma.photoMosaic.findMany({
       include: {
@@ -73,52 +73,139 @@ app.post("/admin/mosaic", async (req, res, next) => {
   }
 });
 
-app.get("/admin/images/:mosaic_id", async (req, res, next) => {
+app.post(`/admin/mosaic/:mosaicId/target-image`, upload.single('image'), async (req, res) => {
+  const { mosaicId } = req.params;
+  console.log("BODY:", req.body);
+  console.log("FILE:", req.file);
+  console.log("FILES:", req.files);
+  const file = req.file;
+  const fileExtension = "." + getFileExtension(file.originalname);
+
+  // Move the image from the temp folder..
+  // ..to public/mosaics/mosaicId/target.jpg (or whatever the extension is).
+  MoveFile(
+    file.path,
+    `public/mosaics/${mosaicId}/target${fileExtension}`
+  );
+  
+  // Save the filename and path for the target.
+  const updatePhotoMosaic = await prisma.photoMosaic.update({
+    where: {
+      id: parseInt(mosaicId)
+    },
+    data: {
+      targetFilename: `target${fileExtension}`,
+      targetPath: `/mosaics/${mosaicId}/`,
+    }
+  });
+
+  // Return the path + filename.
+  res.json(updatePhotoMosaic);
+})
+
+app.get("/admin/mosaic/:mosaicId", async (req, res, next) => {
   try {
-    const { mosaic_id } = req.params;
-    const images = await prisma.image.findMany({
-      where: { photoMosaicId: parseInt(mosaic_id) },
+    const { mosaicId } = req.params;
+    const mosaic = await prisma.photoMosaic.findUnique({
+      where: { id: parseInt(mosaicId) },
+      include: {
+        images: true,
+        raffle: true,
+      },
     });
-    res.json(images);
+    res.json(mosaic);
   } catch (err) {
     next(err);
   }
 });
 
-app.post("/fan/images/:mosaic_id", async (req, res, next) => {
+app.post('/admin/mosaic/:mosaicId/generate', async (req, res) => {
+  const { mosaicId } = req.params;
+
+  const mosaic = await prisma.photoMosaic.findUnique({
+    where: { id: parseInt(mosaicId) }
+  })
+  
+  const targetImageFullPath =  `/public/mosaics/${mosaicId}/${mosaic.targetFilename}`;
+  const tileImagesPath = `/public/mosaics/${mosaicId}/images/`;
+  const resultImagePath = `/public/mosaics/${mosaicId}/`;
+  const resultImageName = "mosaic"; // Do not include the .jpeg extension.
+
+  await CreateMosaic(
+    "." + targetImageFullPath,
+    "." + tileImagesPath,
+    "." + resultImagePath,
+    resultImageName
+  )
+
+  const updatedMosaic = await prisma.photoMosaic.update({
+    where: {
+      id: parseInt(mosaicId)
+    },
+    data: {
+      mosaicFilename: resultImageName + ".jpeg",
+      mosaicPath: resultImagePath,
+    }
+  })
+  
+  res.send(updatedMosaic);
+})
+
+app.post("/fan/mosaic/:mosaicId/images", upload.array('images'), async (req, res, next) => {
   try {
-    checkForRequiredParameters(req, ["full_name", "images"]);
+    const { mosaicId } = req.params;
+    const fullName = req.query.fullName.toString();
+    const images = req.files;
 
-    var { mosaic_id } = req.params;
+    console.log("mosaicId:", mosaicId)
+    console.log("fullName:", fullName)
+    console.log("images:", images)
 
-    var images = req.body.images;
-    var user = await prisma.user.findUnique({
+    let user = await prisma.user.findUnique({
       where: {
-        name: req.body.full_name,
+        name: fullName,
       },
     });
 
     if (user === null) {
       user = await prisma.user.create({
         data: {
-          name: req.body.full_name,
+          name: fullName,
         },
       });
     }
 
-    var resp = [];
+    const resp = [];
     await Promise.all(
       images.map(async (image) => {
-        const image_data = {
-          filename: image.filename,
-          path: image.path,
-          userId: user.id,
-          photoMosaicId: parseInt(mosaic_id),
-        };
-        var created_image = await prisma.image.create({
-          data: image_data,
+        const fileExtension = "." + getFileExtension(image.originalname);
+        
+        // First create the image to generate the id..
+        const createdImage = await prisma.image.create({
+          data: {
+            filename: "temp",
+            path: `public/mosaics/${mosaicId}/images/`,
+            userId: user.id,
+            photoMosaicId: parseInt(mosaicId),
+          },
         });
-        resp.push(created_image);
+
+        // ..then use the id to set the file's filename.
+        const updatedImage = await prisma.image.update({
+          where: {
+            id: createdImage.id,
+          },
+          data: {
+            filename: `${createdImage.id}${fileExtension}`,
+          },
+        });
+
+        MoveFile(
+          image.path,
+          `${updatedImage.path}${updatedImage.filename}`
+        );
+
+        resp.push(updatedImage);
       })
     );
 
