@@ -1,4 +1,4 @@
-import { ExecAsync } from "./util/scripting.js";
+import { ExecAsync } from "./scripting.js";
 
 export async function CreateMosaic
 (
