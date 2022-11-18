@@ -1,4 +1,7 @@
-import { ExecAsync } from "./util/scripting.js";
+import { PrismaClient } from "@prisma/client";
+const prisma = new PrismaClient();
+
+import { CreateMosaic } from "./util/image.js";
 
 import express from "express";
 import cors from "cors";
@@ -6,9 +9,19 @@ const app = express();
 app.use(express.json());
 app.use(cors());
 const port = 3000;
+app.use(express.static('../public'))
 
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+app.get('/', async (req, res) => {
+  // These variables need to be dynamic.
+  const targetImagePath = "~/images/test.jpg";
+  const tileImagesPath = "~/images/airplane";
+  const resultImagePath = "../public/images/"
+  const resultImageName = "api_test_mosaic"; // Do not include the .jpeg extension
+
+  await CreateMosaic(targetImagePath, tileImagesPath, resultImagePath, resultImageName)
+  
+  res.send(`Hello World! /public/images/${resultImageName}.jpeg`);
+})
 
 const checkForRequiredParameters = (req, parameters) => {
   for (var i = 0; i < parameters.length; i++) {
@@ -113,11 +126,6 @@ app.post("/fan/images/:mosaic_id", async (req, res, next) => {
   } catch (err) {
     next(err);
   }
-});
-
-app.get("/", async (req, res) => {
-  await ExecAsync("ls -l");
-  res.send("Hello World!");
 });
 
 app.listen(port, () => {
